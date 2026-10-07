@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domótica</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-soft: #111827;
+      --panel: #1f2937;
+      --panel-2: #0b1220;
+      --primary: #38bdf8;
+      --primary-2: #22c55e;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #e5eefb;
+      --muted: #94a3b8;
+      --shadow: rgba(0,0,0,0.35);
+      --border: rgba(148, 163, 184, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, var(--bg) 0%, #020817 100%);
+      color: var(--text);
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 18px 22px;
+      background: rgba(31,41,55,0.85);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 12px 24px var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      display: grid;
+      place-items: center;
+      font-weight: bold;
+      color: white;
+      box-shadow: 0 8px 18px rgba(56, 189, 248, 0.35);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      letter-spacing: 0.04em;
+    }
+
+    .status-pill {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #86efac;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.6fr 0.9fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .devices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .device {
+      background: linear-gradient(180deg, rgba(31,41,55,0.8), rgba(15,23,42,0.9));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 160px;
+    }
+
+    .device-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .device-name {
+      font-size: 1.05rem;
+      font-weight: bold;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(248, 113, 113, 0.7);
+      transition: all 0.25s ease;
+    }
+
+    .dot.on {
+      background: var(--primary-2);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+    }
+
+    .device-icon {
+      font-size: 2rem;
+      opacity: 0.9;
+    }
+
+    .device-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toggle {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      background: linear-gradient(135deg, #ef4444, #f97316);
+    }
+
+    .toggle.on {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .toggle:hover {
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+
+    .right-col {
+      display: grid;
+      gap: 20px;
+    }
+
+    .climate {
+      display: grid;
+      gap: 18px;
+    }
+
+    .temp-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 2.1rem;
+      font-weight: bold;
+    }
+
+    .temp-row .small {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: normal;
+    }
+
+    .slider-wrap {
+      display: grid;
+      gap: 10px;
+    }
+
+    .slider-wrap input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+
+    .modes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mode-btn {
+      background: #0f172a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .mode-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #bae6fd;
+    }
+
+    .logs {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+      max-height: 250px;
+      overflow: auto;
+    }
+
+    .logs li {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .logs li strong {
+      color: var(--text);
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .devices {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">H</div>
+        <h1>Home Control</h1>
+      </div>
+      <div class="status-pill">Sistema online</div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Dispositivos</h2>
+        <div class="devices">
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Luz Sala</div>
+              <div class="dot" data-device="luz-sala"></div>
+            </div>
+            <div class="device-icon">💡</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-luz-sala">Desligada</strong>
+            </div>
+            <button class="toggle" data-device="luz-sala" data-label="Luz Sala">Ligar</button>
+          </div>
+
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Luz Quarto</div>
+              <div class="dot" data-device="luz-quarto"></div>
+            </div>
+            <div class="device-icon">💡</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-luz-quarto">Desligada</strong>
+            </div>
+            <button class="toggle" data-device="luz-quarto" data-label="Luz Quarto">Ligar</button>
+          </div>
+
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Ar Condicionado</div>
+              <div class="dot" data-device="ar"></div>
+            </div>
+            <div class="device-icon">❄️</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-ar">Desligado</strong>
+            </div>
+            <button class="toggle" data-device="ar" data-label="Ar Condicionado">Ligar</button>
+          </div>
+
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Câmara</div>
+              <div class="dot" data-device="camera"></div>
+            </div>
+            <div class="device-icon">📹</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-camera">Desligada</strong>
+            </div>
+            <button class="toggle" data-device="camera" data-label="Câmara">Ligar</button>
+          </div>
+
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Alarme</div>
+              <div class="dot" data-device="alarme"></div>
+            </div>
+            <div class="device-icon">🚨</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-alarme">Desativado</strong>
+            </div>
+            <button class="toggle" data-device="alarme" data-label="Alarme">Ativar</button>
+          </div>
+
+          <div class="device">
+            <div class="device-head">
+              <div class="device-name">Portão</div>
+              <div class="dot" data-device="portao"></div>
+            </div>
+            <div class="device-icon">🚗</div>
+            <div class="device-meta">
+              <span>Estado</span>
+              <strong id="state-portao">Fechado</strong>
+            </div>
+            <button class="toggle" data-device="portao" data-label="Portão">Abrir</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="right-col">
+        <section class="panel climate">
+          <h2>Climatização</h2>
+
+          <div class="temp-row">
+            <div>
+              <span id="tempValue">22</span>°C
+            </div>
+            <div class="small">Ambiente</div>
+          </div>
+
+          <div class="slider-wrap">
+            <label for="tempSlider">Temperatura</label>
+            <input id="tempSlider" type="range" min="15" max="30" value="22" />
+          </div>
+
+          <div class="modes">
+            <button class="mode-btn active" data-mode="Eco">Eco</button>
+            <button class="mode-btn" data-mode="Normal">Normal</button>
+            <button class="mode-btn" data-mode="Turbo">Turbo</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Registo</h2>
+          <ul class="logs" id="logs"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const defaultState = {
+      "luz-sala": false,
+      "luz-quarto": false,
+      "ar": false,
+      "camera": false,
+      "alarme": false,
+      "portao": false,
+      temp: 22,
+      mode: "Eco"
+    };
+
+    const state = JSON.parse(localStorage.getItem("domotica-state") || JSON.stringify(defaultState));
+
+    const buttons = document.querySelectorAll(".toggle");
+    const tempSlider = document.getElementById("tempSlider");
+    const tempValue = document.getElementById("tempValue");
+    const logsList = document.getElementById("logs");
+    const modeButtons = document.querySelectorAll(".mode-btn");
+
+    function saveState() {
+      localStorage.setItem("domotica-state", JSON.stringify(state));
+    }
+
+    function addLog(message) {
+      const item = document.createElement("li");
+      item.innerHTML = `<strong>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong> - ${message}`;
+      logsList.prepend(item);
+    }
+
+    function updateDevice(deviceId, label, active, buttonText, activeText, inactiveText) {
+      const dot = document.querySelector(`.dot[data-device="${deviceId}"]`);
+      const text = document.getElementById(`state-${deviceId}`);
+      const button = document.querySelector(`.toggle[data-device="${deviceId}"]`);
+
+      state[deviceId] = active;
+      saveState();
+
+      if (dot) {
+        dot.classList.toggle("on", active);
+      }
+
+      if (text) {
+        text.textContent = active ? activeText : inactiveText;
+      }
+
+      if (button) {
+        button.classList.toggle("on", active);
+        button.textContent = active ? "Desligar" : buttonText;
+      }
+
+      addLog(`${label} ${active ? "ativado" : "desativado"}.`);
+    }
+
+    function applyCurrentState() {
+      buttons.forEach((button) => {
+        const id = button.dataset.device;
+        const active = !!state[id];
+        const dot = document.querySelector(`.dot[data-device="${id}"]`);
+        const text = document.getElementById(`state-${id}`);
+
+        if (dot) dot.classList.toggle("on", active);
+        if (text) {
+          if (id === "luz-sala" || id === "luz-quarto" || id === "camera" || id === "ar") {
+            text.textContent = active ? "Ligada" : "Desligada";
+          } else if (id === "alarme") {
+            text.textContent = active ? "Ativado" : "Desativado";
+          } else if (id === "portao") {
+            text.textContent = active ? "Aberto" : "Fechado";
+          }
+        }
+
+        if (button) {
+          button.classList.toggle("on", active);
+
+          if (id === "luz-sala" || id === "luz-quarto" || id === "camera" || id === "ar") {
+            button.textContent = active ? "Desligar" : "Ligar";
+          } else if (id === "alarme") {
+            button.textContent = active ? "Desativar" : "Ativar";
+          } else if (id === "portao") {
+            button.textContent = active ? "Fechar" : "Abrir";
+          }
+        }
+      });
+
+      tempSlider.value = state.temp ?? 22;
+      tempValue.textContent = state.temp ?? 22;
+
+      modeButtons.forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.mode === state.mode);
+      });
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const deviceId = button.dataset.device;
+        const label = button.dataset.label;
+        const active = !state[deviceId];
+
+        if (deviceId === "luz-sala" || deviceId === "luz-quarto" || deviceId === "camera" || deviceId === "ar") {
+          updateDevice(deviceId, label, active, "Ligar", "Ligada", "Desligada");
+        } else if (deviceId === "alarme") {
+          updateDevice(deviceId, label, active, "Ativar", "Ativado", "Desativado");
+        } else if (deviceId === "portao") {
+          updateDevice(deviceId, label, active, "Abrir", "Aberto", "Fechado");
+        }
+      });
+    });
+
+    tempSlider.addEventListener("input", (e) => {
+      state.temp = Number(e.target.value);
+      tempValue.textContent = state.temp;
+      saveState();
+      addLog(`Temperatura ajustada para ${state.temp}°C.`);
+    });
+
+    modeButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.mode = btn.dataset.mode;
+        modeButtons.forEach((b) => b.classList.toggle("active", b === btn));
+        saveState();
+        addLog(`Modo ${state.mode} ativado.`);
+      });
+    });
+
+    function bootstrapLogs() {
+      logsList.innerHTML = "";
+      addLog("Sistema inicializado.");
+      addLog(`Modo ambiente: ${state.mode}.`);
+      addLog(`Temperatura atual: ${state.temp}°C.`);
+    }
+
+    applyCurrentState();
+    bootstrapLogs();
+  </script>
+</body>
+</html>
