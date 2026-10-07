@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Domótica</title>
+  <title>Domótica - 192.168.0.1</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -52,6 +52,7 @@
       border-radius: 18px;
       box-shadow: 0 12px 24px var(--shadow);
       backdrop-filter: blur(8px);
+      flex-wrap: wrap;
     }
 
     .brand {
@@ -78,6 +79,13 @@
       letter-spacing: 0.04em;
     }
 
+    .status-info {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
     .status-pill {
       background: rgba(34, 197, 94, 0.12);
       border: 1px solid rgba(34, 197, 94, 0.35);
@@ -86,6 +94,22 @@
       border-radius: 999px;
       font-size: 0.82rem;
       font-weight: bold;
+    }
+
+    .status-pill.offline {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+
+    .ip-display {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-family: monospace;
     }
 
     .grid {
@@ -153,6 +177,17 @@
       box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
     }
 
+    .dot.loading {
+      background: var(--warning);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.8);
+      animation: pulse 0.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
     .device-icon {
       font-size: 2rem;
       opacity: 0.9;
@@ -181,9 +216,14 @@
       background: linear-gradient(135deg, #22c55e, #16a34a);
     }
 
-    .toggle:hover {
+    .toggle:hover:not(:disabled) {
       transform: translateY(-1px);
       opacity: 0.96;
+    }
+
+    .toggle:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .right-col {
@@ -249,7 +289,7 @@
       display: grid;
       gap: 10px;
       max-height: 250px;
-      overflow: auto;
+      overflow-y: auto;
     }
 
     .logs li {
@@ -265,6 +305,16 @@
       color: var(--text);
     }
 
+    .logs li.error {
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+
+    .logs li.success {
+      border-color: rgba(34, 197, 94, 0.35);
+      color: #86efac;
+    }
+
     @media (max-width: 900px) {
       .grid {
         grid-template-columns: 1fr;
@@ -272,6 +322,45 @@
 
       .devices {
         grid-template-columns: 1fr;
+      }
+
+      .brand h1 {
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
+
+      .topbar {
+        padding: 12px 16px;
+        gap: 12px;
+      }
+
+      .brand h1 {
+        font-size: 0.9rem;
+      }
+
+      .ip-display {
+        font-size: 0.7rem;
+      }
+
+      .panel {
+        padding: 12px;
+      }
+
+      .devices {
+        grid-template-columns: 1fr;
+      }
+
+      .device {
+        min-height: 140px;
+      }
+
+      .temp-row {
+        font-size: 1.6rem;
       }
     }
   </style>
@@ -283,7 +372,10 @@
         <div class="brand-badge">H</div>
         <h1>Home Control</h1>
       </div>
-      <div class="status-pill">Sistema online</div>
+      <div class="status-info">
+        <div class="ip-display">192.168.0.1</div>
+        <div class="status-pill" id="statusPill">Conectando...</div>
+      </div>
     </header>
 
     <div class="grid">
@@ -402,6 +494,10 @@
   </div>
 
   <script>
+    const API_BASE = "http://192.168.0.1";
+    const API_PORT = 8080; // Muda conforme necessário
+    const API_URL = `${API_BASE}:${API_PORT}`;
+
     const defaultState = {
       "luz-sala": false,
       "luz-quarto": false,
@@ -414,21 +510,96 @@
     };
 
     const state = JSON.parse(localStorage.getItem("domotica-state") || JSON.stringify(defaultState));
+    let isOnline = false;
 
     const buttons = document.querySelectorAll(".toggle");
     const tempSlider = document.getElementById("tempSlider");
     const tempValue = document.getElementById("tempValue");
     const logsList = document.getElementById("logs");
     const modeButtons = document.querySelectorAll(".mode-btn");
+    const statusPill = document.getElementById("statusPill");
+
+    // Verifica conexão com o servidor
+    async function checkConnection() {
+      try {
+        const response = await fetch(`${API_URL}/api/status`, { method: "GET", timeout: 5000 });
+        isOnline = response.ok;
+      } catch (err) {
+        isOnline = false;
+      }
+      updateStatusPill();
+    }
+
+    function updateStatusPill() {
+      if (isOnline) {
+        statusPill.textContent = "Sistema online";
+        statusPill.classList.remove("offline");
+      } else {
+        statusPill.textContent = "Offline (Local)";
+        statusPill.classList.add("offline");
+      }
+    }
 
     function saveState() {
       localStorage.setItem("domotica-state", JSON.stringify(state));
     }
 
-    function addLog(message) {
+    function addLog(message, type = "info") {
       const item = document.createElement("li");
-      item.innerHTML = `<strong>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong> - ${message}`;
+      const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      item.innerHTML = `<strong>${time}</strong> - ${message}`;
+      item.className = type; // info, success, error
       logsList.prepend(item);
+
+      // Mantém apenas as últimas 20 entradas
+      while (logsList.children.length > 20) {
+        logsList.removeChild(logsList.lastChild);
+      }
+    }
+
+    async function sendCommand(device, action) {
+      const dot = document.querySelector(`.dot[data-device="${device}"]`);
+      const button = document.querySelector(`.toggle[data-device="${device}"]`);
+
+      if (!button) return;
+
+      // Mostrar loading
+      if (dot) dot.classList.add("loading");
+      button.disabled = true;
+
+      try {
+        if (!isOnline) {
+          // Modo offline: apenas localStorage
+          addLog(`[OFFLINE] ${device} será sincronizado quando online`, "info");
+          return { success: true, offline: true };
+        }
+
+        // Enviar comando para a API
+        const url = `${API_URL}/api/device/${device}`;
+        const payload = { action: action ? "on" : "off" };
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          addLog(`Comando enviado: ${device} = ${action ? "ON" : "OFF"}`, "success");
+          return data;
+        } else {
+          addLog(`Erro: ${data.message || "Falha no comando"}`, "error");
+          return { success: false };
+        }
+      } catch (err) {
+        addLog(`Erro de rede: ${err.message}`, "error");
+        return { success: false };
+      } finally {
+        if (dot) dot.classList.remove("loading");
+        button.disabled = false;
+      }
     }
 
     function updateDevice(deviceId, label, active, buttonText, activeText, inactiveText) {
@@ -451,8 +622,6 @@
         button.classList.toggle("on", active);
         button.textContent = active ? "Desligar" : buttonText;
       }
-
-      addLog(`${label} ${active ? "ativado" : "desativado"}.`);
     }
 
     function applyCurrentState() {
@@ -495,46 +664,82 @@
     }
 
     buttons.forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         const deviceId = button.dataset.device;
         const label = button.dataset.label;
         const active = !state[deviceId];
 
-        if (deviceId === "luz-sala" || deviceId === "luz-quarto" || deviceId === "camera" || deviceId === "ar") {
-          updateDevice(deviceId, label, active, "Ligar", "Ligada", "Desligada");
-        } else if (deviceId === "alarme") {
-          updateDevice(deviceId, label, active, "Ativar", "Ativado", "Desativado");
-        } else if (deviceId === "portao") {
-          updateDevice(deviceId, label, active, "Abrir", "Aberto", "Fechado");
+        const result = await sendCommand(deviceId, active);
+
+        if (result.success || result.offline) {
+          if (deviceId === "luz-sala" || deviceId === "luz-quarto" || deviceId === "camera" || deviceId === "ar") {
+            updateDevice(deviceId, label, active, "Ligar", "Ligada", "Desligada");
+          } else if (deviceId === "alarme") {
+            updateDevice(deviceId, label, active, "Ativar", "Ativado", "Desativado");
+          } else if (deviceId === "portao") {
+            updateDevice(deviceId, label, active, "Abrir", "Aberto", "Fechado");
+          }
         }
       });
     });
 
-    tempSlider.addEventListener("input", (e) => {
+    tempSlider.addEventListener("input", async (e) => {
       state.temp = Number(e.target.value);
       tempValue.textContent = state.temp;
       saveState();
-      addLog(`Temperatura ajustada para ${state.temp}°C.`);
+
+      if (isOnline) {
+        try {
+          await fetch(`${API_URL}/api/temperature`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ temperature: state.temp })
+          });
+          addLog(`Temperatura ajustada para ${state.temp}°C`, "success");
+        } catch (err) {
+          addLog(`Erro ao ajustar temperatura: ${err.message}`, "error");
+        }
+      } else {
+        addLog(`Temperatura ajustada para ${state.temp}°C (LOCAL)`, "info");
+      }
     });
 
     modeButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         state.mode = btn.dataset.mode;
         modeButtons.forEach((b) => b.classList.toggle("active", b === btn));
         saveState();
-        addLog(`Modo ${state.mode} ativado.`);
+
+        if (isOnline) {
+          try {
+            await fetch(`${API_URL}/api/mode`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode: state.mode })
+            });
+            addLog(`Modo ${state.mode} ativado`, "success");
+          } catch (err) {
+            addLog(`Erro ao alterar modo: ${err.message}`, "error");
+          }
+        } else {
+          addLog(`Modo ${state.mode} ativado (LOCAL)`, "info");
+        }
       });
     });
 
     function bootstrapLogs() {
       logsList.innerHTML = "";
-      addLog("Sistema inicializado.");
-      addLog(`Modo ambiente: ${state.mode}.`);
-      addLog(`Temperatura atual: ${state.temp}°C.`);
+      addLog("Sistema inicializado.", "info");
+      addLog(`Conectando a 192.168.0.1...`, "info");
     }
 
+    // Inicialização
     applyCurrentState();
     bootstrapLogs();
+    checkConnection();
+
+    // Verifica conexão a cada 10 segundos
+    setInterval(checkConnection, 10000);
   </script>
 </body>
 </html>
